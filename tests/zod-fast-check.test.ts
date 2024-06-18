@@ -80,7 +80,10 @@ describe("Generate arbitraries for Zod schema input types", () => {
     "record of objects": z.record(z.object({ name: z.string() })),
     "record of strings": z.record(z.string()),
     "record of strings with min-length values": z.record(z.string().min(1)),
-    "record of strings with min-length keys": z.record(z.string().min(1), z.string()),
+    "record of strings with min-length keys": z.record(
+      z.string().min(1),
+      z.string()
+    ),
     "map with string keys": z.map(z.string(), z.number()),
     "map with object keys": z.map(
       z.object({ id: z.number() }),
@@ -273,7 +276,7 @@ describe("Generate arbitraries for Zod schema output types", () => {
     const arbitrary = ZodFastCheck().outputOf(schema);
 
     return fc.assert(
-      fc.property(arbitrary, (value) => 
+      fc.property(arbitrary, (value) =>
         expect(value).not.toMatch(/(^\s)|(\s$)/)
       )
     );
@@ -537,16 +540,166 @@ describe("Throwing an error if it is not able to generate a value", () => {
   });
 });
 
-describe("Throwing an error if the schema type is not supported", () => {
-  test("lazy schemas", () => {
-    expect(() => ZodFastCheck().inputOf(z.lazy(() => z.string()))).toThrow(
-      new ZodFastCheckUnsupportedSchemaError(
-        "Unable to generate valid values for Zod schema. " +
-          "Lazy schemas are not supported (at path '.')."
-      )
-    );
-  });
+describe("Generate arbitraries for lazy schemas", () => {
+  enum Biscuits {
+    Digestive,
+    CustardCream,
+    RichTea,
+  }
 
+  enum Cakes {
+    CarrotCake = "CARROT_CAKE",
+    ChocolateCake = "CHOCOLATE_CAKE",
+    VictoriaSponge = "VICTORIA_SPONGE",
+  }
+
+  const penguinSymbol = Symbol.for("penguin");
+
+  const schemas = {
+    string: z.string(),
+    number: z.number(),
+    bigint: z.bigint(),
+    boolean: z.boolean(),
+    date: z.date(),
+    undefined: z.undefined(),
+    null: z.null(),
+    "array of numbers": z.array(z.number()),
+    "array of string": z.array(z.string()),
+    "array of arrays of booleans": z.array(z.array(z.boolean())),
+    "nonempty array": z.array(z.number()).nonempty(),
+    "empty object": z.object({}),
+    "simple object": z.object({
+      aString: z.string(),
+      aBoolean: z.boolean(),
+    }),
+    "nested object": z.object({
+      child: z.object({
+        grandchild1: z.null(),
+        grandchild2: z.boolean(),
+      }),
+    }),
+    union: z.union([z.boolean(), z.string()]),
+    "discriminated union": z.discriminatedUnion("type", [
+      z.object({ type: z.literal("a"), a: z.string() }),
+      z.object({
+        type: z.literal("b"),
+        b: z.object({
+          x: z.string(),
+        }),
+      }),
+      z.object({
+        type: z.literal("c"),
+        c: z.number(),
+      }),
+    ]),
+    nan: z.nan(),
+    "string branded with string": z.string().brand<"timezone">(),
+    "object branded with number": z.object({ a: z.boolean() }).brand<123>(),
+    "array branded with symbol": z
+      .array(z.number())
+      .brand<typeof penguinSymbol>(),
+    "empty tuple": z.tuple([]),
+    "nonempty tuple": z.tuple([z.string(), z.boolean(), z.date()]),
+    "nested tuple": z.tuple([z.string(), z.tuple([z.number()])]),
+    "record of numbers": z.record(z.number()),
+    "record of objects": z.record(z.object({ name: z.string() })),
+    "record of strings": z.record(z.string()),
+    "record of strings with min-length values": z.record(z.string().min(1)),
+    "record of strings with min-length keys": z.record(
+      z.string().min(1),
+      z.string()
+    ),
+    "map with string keys": z.map(z.string(), z.number()),
+    "map with object keys": z.map(
+      z.object({ id: z.number() }),
+      z.array(z.boolean())
+    ),
+    set: z.set(z.number()),
+    "nonempty set": z.set(z.number()).nonempty(),
+    "set with min": z.set(z.number()).min(2),
+    "set with max": z.set(z.number()).max(3),
+    "function returning boolean": z.function().returns(z.boolean()),
+    "literal number": z.literal(123.5),
+    "literal string": z.literal("hello"),
+    "literal boolean": z.literal(false),
+    "literal symbol": z.literal(Symbol("mySymbol")),
+    enum: z.enum(["Bear", "Wolf", "Fox"]),
+    "native enum with numeric values": z.nativeEnum(Biscuits),
+    "native enum with string values": z.nativeEnum(Cakes),
+    "const enum": z.nativeEnum({
+      Duck: "duck",
+      Swan: "swan",
+      Goose: 3,
+    }),
+    promise: z.promise(z.string()),
+    any: z.any(),
+    unknown: z.unknown(),
+    void: z.void(),
+    "optional number": z.optional(z.number()),
+    "optional boolean": z.optional(z.boolean()),
+    "nullable string": z.nullable(z.string()),
+    "nullable object": z.nullable(z.object({ age: z.number() })),
+    "with default": z.number().default(0),
+
+    // Schemas which rely on refinements
+    "number with minimum": z.number().min(500),
+    "number with maximum": z.number().max(500),
+    "number with float max and min": z.number().min(0.5).max(1.5),
+    int: z.number().int(),
+    positive: z.number().positive(),
+    negative: z.number().negative(),
+    nonpositive: z.number().nonpositive(),
+    nonnegative: z.number().nonnegative(),
+    finite: z.number().finite(),
+    "multiple of": z.number().multipleOf(3),
+    "multiple multiple of": z.number().multipleOf(3).multipleOf(5),
+    "multiple of with min and max": z.number().multipleOf(10).min(67).max(99),
+    "number with custom refinement": z.number().refine((x) => x % 3 === 0),
+
+    "string with minimum length": z.string().min(24),
+    "string with maximum length": z.string().max(24),
+    "string with fixed length": z.string().length(256),
+    "string with prefix": z.string().startsWith("prefix"),
+    "string with suffix": z.string().endsWith("suffix"),
+    cuid: z.string().cuid(),
+    cuid2: z.string().cuid2(),
+    uuid: z.string().uuid(),
+    url: z.string().url(),
+    email: z.string().email(),
+    regex: z.string().regex(/\s/),
+    datetime: z.string().datetime(),
+    "datetime with offset": z.string().datetime({ offset: true }),
+    "datetime with low precision": z.string().datetime({ precision: 0 }),
+    "datetime with high precision": z.string().datetime({ precision: 6 }),
+    "number to string transformer": z.number().transform(String),
+    "deeply nested transformer": z.array(z.boolean().transform(Number)),
+    "string to number pipeline": z
+      .string()
+      .transform((s) => s.length)
+      .pipe(z.number().min(5)),
+    "Coerced string": z.coerce.string(),
+    "Coerced number": z.coerce.number(),
+    "Coerced boolean": z.coerce.boolean(),
+    "Coerced bigint": z.coerce.bigint(),
+    "Coerced date": z.coerce.date(),
+    "string with catch": z.string().catch("fallback"),
+    symbol: z.symbol(),
+  };
+
+  for (const [name, schema] of Object.entries(schemas)) {
+    test(name, () => {
+      const lazySchema = z.lazy(() => schema);
+      const arbitrary = ZodFastCheck().inputOf(lazySchema);
+      return fc.assert(
+        fc.asyncProperty(arbitrary, async (value) => {
+          await schema.parse(value);
+        })
+      );
+    });
+  }
+});
+
+describe("Throwing an error if the schema type is not supported", () => {
   test("never schemas", () => {
     expect(() => ZodFastCheck().inputOf(z.never())).toThrow(
       new ZodFastCheckUnsupportedSchemaError(

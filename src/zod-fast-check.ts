@@ -14,6 +14,7 @@ import {
   ZodFirstPartySchemaTypes,
   ZodFirstPartyTypeKind,
   ZodFunction,
+  ZodLazy,
   ZodLiteral,
   ZodMap,
   ZodNativeEnum,
@@ -30,6 +31,7 @@ import {
   ZodString,
   ZodSymbol,
   ZodTuple,
+  ZodTypeAny,
   ZodTypeDef,
   ZodUnion,
 } from "zod";
@@ -426,8 +428,8 @@ const arbitraryBuilders: ArbitraryBuilders = {
       (returnValue) => () => returnValue
     );
   },
-  ZodLazy(_: unknown, path: string) {
-    unsupported(`Lazy`, path);
+  ZodLazy(lazy: ZodLazy<ZodTypeAny>, path: string, recurse: SchemaToArbitrary) {
+    return recurse(lazy.schema, path + ".(schema)");
   },
   ZodLiteral(schema: ZodLiteral<unknown>) {
     return fc.constant(schema._def.value);
