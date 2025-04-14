@@ -3,12 +3,13 @@ import * as z from "zod";
 import {
   INVALID,
   OK,
-  ParseInput,
-  ParseReturnType,
+  type ParseInput,
+  type ParseReturnType,
   ZodSchema,
-  ZodTypeAny,
-  ZodTypeDef,
+  type ZodTypeAny,
+  type ZodTypeDef,
 } from "zod";
+
 import {
   ZodFastCheck,
   ZodFastCheckGenerationError,
@@ -17,9 +18,9 @@ import {
 
 describe("Generate arbitraries for Zod schema input types", () => {
   enum Biscuits {
-    Digestive,
-    CustardCream,
-    RichTea,
+    CustardCream = 1,
+    Digestive = 0,
+    RichTea = 2,
   }
 
   enum Cakes {
@@ -31,134 +32,134 @@ describe("Generate arbitraries for Zod schema input types", () => {
   const penguinSymbol = Symbol.for("penguin");
 
   const schemas = {
-    string: z.string(),
-    number: z.number(),
-    bigint: z.bigint(),
-    boolean: z.boolean(),
-    date: z.date(),
-    undefined: z.undefined(),
-    null: z.null(),
+    any: z.any(),
+    "array branded with symbol": z
+      .array(z.number())
+      .brand<typeof penguinSymbol>(),
+    "array of arrays of booleans": z.array(z.array(z.boolean())),
     "array of numbers": z.array(z.number()),
     "array of string": z.array(z.string()),
-    "array of arrays of booleans": z.array(z.array(z.boolean())),
-    "nonempty array": z.array(z.number()).nonempty(),
-    "empty object": z.object({}),
-    "simple object": z.object({
-      aString: z.string(),
-      aBoolean: z.boolean(),
+    bigint: z.bigint(),
+    boolean: z.boolean(),
+    "Coerced bigint": z.coerce.bigint(),
+    "Coerced boolean": z.coerce.boolean(),
+    "Coerced date": z.coerce.date(),
+    "Coerced number": z.coerce.number(),
+    "Coerced string": z.coerce.string(),
+    "const enum": z.nativeEnum({
+      Duck: "duck",
+      Goose: 3,
+      Swan: "swan",
     }),
+    cuid: z.string().cuid(),
+    cuid2: z.string().cuid2(),
+    date: z.date(),
+    datetime: z.string().datetime(),
+    "datetime with high precision": z.string().datetime({ precision: 6 }),
+    "datetime with low precision": z.string().datetime({ precision: 0 }),
+    "datetime with offset": z.string().datetime({ offset: true }),
+    "deeply nested transformer": z.array(z.boolean().transform(Number)),
+    "discriminated union": z.discriminatedUnion("type", [
+      z.object({ a: z.string(), type: z.literal("a") }),
+      z.object({
+        b: z.object({
+          x: z.string(),
+        }),
+        type: z.literal("b"),
+      }),
+      z.object({
+        c: z.number(),
+        type: z.literal("c"),
+      }),
+    ]),
+    email: z.string().email(),
+    "empty object": z.object({}),
+    "empty tuple": z.tuple([]),
+    enum: z.enum(["Bear", "Wolf", "Fox"]),
+    finite: z.number().finite(),
+    "function returning boolean": z.function().returns(z.boolean()),
+    int: z.number().int(),
+    "literal boolean": z.literal(false),
+    "literal number": z.literal(123.5),
+    "literal string": z.literal("hello"),
+    "literal symbol": z.literal(Symbol("mySymbol")),
+    "map with object keys": z.map(
+      z.object({ id: z.number() }),
+      z.array(z.boolean()),
+    ),
+    "map with string keys": z.map(z.string(), z.number()),
+    "multiple multiple of": z.number().multipleOf(3).multipleOf(5),
+    "multiple of": z.number().multipleOf(3),
+    "multiple of with min and max": z.number().multipleOf(10).min(67).max(99),
+    nan: z.nan(),
+    "native enum with numeric values": z.nativeEnum(Biscuits),
+    "native enum with string values": z.nativeEnum(Cakes),
+    negative: z.number().negative(),
     "nested object": z.object({
       child: z.object({
         grandchild1: z.null(),
         grandchild2: z.boolean(),
       }),
     }),
-    union: z.union([z.boolean(), z.string()]),
-    "discriminated union": z.discriminatedUnion("type", [
-      z.object({ type: z.literal("a"), a: z.string() }),
-      z.object({
-        type: z.literal("b"),
-        b: z.object({
-          x: z.string(),
-        }),
-      }),
-      z.object({
-        type: z.literal("c"),
-        c: z.number(),
-      }),
-    ]),
-    nan: z.nan(),
-    "string branded with string": z.string().brand<"timezone">(),
-    "object branded with number": z.object({ a: z.boolean() }).brand<123>(),
-    "array branded with symbol": z
-      .array(z.number())
-      .brand<typeof penguinSymbol>(),
-    "empty tuple": z.tuple([]),
-    "nonempty tuple": z.tuple([z.string(), z.boolean(), z.date()]),
     "nested tuple": z.tuple([z.string(), z.tuple([z.number()])]),
-    "record of numbers": z.record(z.number()),
-    "record of objects": z.record(z.object({ name: z.string() })),
-    "record of strings": z.record(z.string()),
-    "record of strings with min-length values": z.record(z.string().min(1)),
-    "record of strings with min-length keys": z.record(
-      z.string().min(1),
-      z.string()
-    ),
-    "map with string keys": z.map(z.string(), z.number()),
-    "map with object keys": z.map(
-      z.object({ id: z.number() }),
-      z.array(z.boolean())
-    ),
-    set: z.set(z.number()),
+    "nonempty array": z.array(z.number()).nonempty(),
     "nonempty set": z.set(z.number()).nonempty(),
-    "set with min": z.set(z.number()).min(2),
-    "set with max": z.set(z.number()).max(3),
-    "function returning boolean": z.function().returns(z.boolean()),
-    "literal number": z.literal(123.5),
-    "literal string": z.literal("hello"),
-    "literal boolean": z.literal(false),
-    "literal symbol": z.literal(Symbol("mySymbol")),
-    enum: z.enum(["Bear", "Wolf", "Fox"]),
-    "native enum with numeric values": z.nativeEnum(Biscuits),
-    "native enum with string values": z.nativeEnum(Cakes),
-    "const enum": z.nativeEnum({
-      Duck: "duck",
-      Swan: "swan",
-      Goose: 3,
-    }),
-    promise: z.promise(z.string()),
-    any: z.any(),
-    unknown: z.unknown(),
-    void: z.void(),
-    "optional number": z.optional(z.number()),
-    "optional boolean": z.optional(z.boolean()),
-    "nullable string": z.nullable(z.string()),
+    "nonempty tuple": z.tuple([z.string(), z.boolean(), z.date()]),
+    nonnegative: z.number().nonnegative(),
+    nonpositive: z.number().nonpositive(),
+    null: z.null(),
     "nullable object": z.nullable(z.object({ age: z.number() })),
-    "with default": z.number().default(0),
+    "nullable string": z.nullable(z.string()),
 
+    number: z.number(),
+    "number to string transformer": z.number().transform(String),
+    "number with custom refinement": z.number().refine((x) => x % 3 === 0),
+    "number with float max and min": z.number().min(0.5).max(1.5),
+    "number with maximum": z.number().max(500),
     // Schemas which rely on refinements
     "number with minimum": z.number().min(500),
-    "number with maximum": z.number().max(500),
-    "number with float max and min": z.number().min(0.5).max(1.5),
-    int: z.number().int(),
+    "object branded with number": z.object({ a: z.boolean() }).brand<123>(),
+    "optional boolean": z.optional(z.boolean()),
+    "optional number": z.optional(z.number()),
     positive: z.number().positive(),
-    negative: z.number().negative(),
-    nonpositive: z.number().nonpositive(),
-    nonnegative: z.number().nonnegative(),
-    finite: z.number().finite(),
-    "multiple of": z.number().multipleOf(3),
-    "multiple multiple of": z.number().multipleOf(3).multipleOf(5),
-    "multiple of with min and max": z.number().multipleOf(10).min(67).max(99),
-    "number with custom refinement": z.number().refine((x) => x % 3 === 0),
+    promise: z.promise(z.string()),
+    "record of numbers": z.record(z.number()),
+    "record of objects": z.record(z.object({ name: z.string() })),
 
-    "string with minimum length": z.string().min(24),
-    "string with maximum length": z.string().max(24),
-    "string with fixed length": z.string().length(256),
-    "string with prefix": z.string().startsWith("prefix"),
-    "string with suffix": z.string().endsWith("suffix"),
-    cuid: z.string().cuid(),
-    cuid2: z.string().cuid2(),
-    uuid: z.string().uuid(),
-    url: z.string().url(),
-    email: z.string().email(),
+    "record of strings": z.record(z.string()),
+    "record of strings with min-length keys": z.record(
+      z.string().min(1),
+      z.string(),
+    ),
+    "record of strings with min-length values": z.record(z.string().min(1)),
     regex: z.string().regex(/\s/),
-    datetime: z.string().datetime(),
-    "datetime with offset": z.string().datetime({ offset: true }),
-    "datetime with low precision": z.string().datetime({ precision: 0 }),
-    "datetime with high precision": z.string().datetime({ precision: 6 }),
-    "number to string transformer": z.number().transform(String),
-    "deeply nested transformer": z.array(z.boolean().transform(Number)),
+    set: z.set(z.number()),
+    "set with max": z.set(z.number()).max(3),
+    "set with min": z.set(z.number()).min(2),
+    "simple object": z.object({
+      aBoolean: z.boolean(),
+      aString: z.string(),
+    }),
+    string: z.string(),
+    "string branded with string": z.string().brand<"timezone">(),
     "string to number pipeline": z
       .string()
       .transform((s) => s.length)
       .pipe(z.number().min(5)),
-    "Coerced string": z.coerce.string(),
-    "Coerced number": z.coerce.number(),
-    "Coerced boolean": z.coerce.boolean(),
-    "Coerced bigint": z.coerce.bigint(),
-    "Coerced date": z.coerce.date(),
     "string with catch": z.string().catch("fallback"),
+    "string with fixed length": z.string().length(256),
+    "string with maximum length": z.string().max(24),
+    "string with minimum length": z.string().min(24),
+    "string with prefix": z.string().startsWith("prefix"),
+    "string with suffix": z.string().endsWith("suffix"),
     symbol: z.symbol(),
+    undefined: z.undefined(),
+    union: z.union([z.boolean(), z.string()]),
+    unknown: z.unknown(),
+    url: z.string().url(),
+    uuid: z.string().uuid(),
+    void: z.void(),
+    "with default": z.number().default(0),
   };
 
   for (const [name, schema] of Object.entries(schemas)) {
@@ -167,7 +168,7 @@ describe("Generate arbitraries for Zod schema input types", () => {
       return fc.assert(
         fc.asyncProperty(arbitrary, async (value) => {
           await schema.parse(value);
-        })
+        }),
       );
     });
   }
@@ -175,15 +176,15 @@ describe("Generate arbitraries for Zod schema input types", () => {
 
 describe("Generate arbitraries for Zod schema output types", () => {
   test("number to string transformer", () => {
-    const targetSchema = z.string().refine((s) => !isNaN(+s));
+    const targetSchema = z.string().refine((s) => !Number.isNaN(+s));
     const schema = z.number().transform(String);
 
     const arbitrary = ZodFastCheck().outputOf(schema);
 
-    return fc.assert(
+    fc.assert(
       fc.property(arbitrary, (value) => {
         targetSchema.parse(value);
-      })
+      }),
     );
   });
 
@@ -193,27 +194,27 @@ describe("Generate arbitraries for Zod schema output types", () => {
 
     const arbitrary = ZodFastCheck().outputOf(schema);
 
-    return fc.assert(
-      fc.asyncProperty(arbitrary, async (value) => {
-        await targetSchema.parse(value);
-      })
+    fc.assert(
+      fc.property(arbitrary, (value) => {
+        targetSchema.parse(value);
+      }),
     );
   });
 
   test("transformer within a transformer", () => {
     // This schema accepts an array of booleans and converts them
     // to strings with exclamation marks then concatenates them.
-    const targetSchema = z.string().regex(/(true\!|false\!)*/);
+    const targetSchema = z.string().regex(/(true!|false!)*/);
     const schema = z
       .array(z.boolean().transform((bool) => `${bool}!`))
       .transform((array) => array.join(""));
 
     const arbitrary = ZodFastCheck().outputOf(schema);
 
-    return fc.assert(
+    fc.assert(
       fc.asyncProperty(arbitrary, async (value) => {
         await targetSchema.parse(value);
-      })
+      }),
     );
   });
 
@@ -235,10 +236,10 @@ describe("Generate arbitraries for Zod schema output types", () => {
 
     const arbitrary = ZodFastCheck().outputOf(schema);
 
-    return fc.assert(
-      fc.property(arbitrary, (value) => {
-        targetSchema.parse(value);
-      })
+    fc.assert(
+      fc.asyncProperty(arbitrary, async (value) => {
+        await targetSchema.parse(value);
+      }),
     );
   });
 
@@ -250,10 +251,10 @@ describe("Generate arbitraries for Zod schema output types", () => {
 
     const arbitrary = ZodFastCheck().outputOf(schema);
 
-    return fc.assert(
+    fc.assert(
       fc.property(arbitrary, (value) => {
         targetSchema.parse(value);
-      })
+      }),
     );
   });
 
@@ -263,10 +264,10 @@ describe("Generate arbitraries for Zod schema output types", () => {
 
     const arbitrary = ZodFastCheck().outputOf(schema);
 
-    return fc.assert(
+    fc.assert(
       fc.property(arbitrary, (value) => {
         targetSchema.parse(value);
-      })
+      }),
     );
   });
 
@@ -275,10 +276,10 @@ describe("Generate arbitraries for Zod schema output types", () => {
 
     const arbitrary = ZodFastCheck().outputOf(schema);
 
-    return fc.assert(
-      fc.property(arbitrary, (value) =>
-        expect(value).not.toMatch(/(^\s)|(\s$)/)
-      )
+    fc.assert(
+      fc.property(arbitrary, (value) => {
+        expect(value).not.toMatch(/(^\s)|(\s$)/);
+      }),
     );
   });
 
@@ -288,10 +289,10 @@ describe("Generate arbitraries for Zod schema output types", () => {
 
     const arbitrary = ZodFastCheck().outputOf(schema);
 
-    return fc.assert(
+    fc.assert(
       fc.property(arbitrary, (value: BrandedString) => {
         expect(typeof value).toBe("string");
-      })
+      }),
     );
   });
 
@@ -304,10 +305,10 @@ describe("Generate arbitraries for Zod schema output types", () => {
 
     const arbitrary = ZodFastCheck().outputOf(schema);
 
-    return fc.assert(
+    fc.assert(
       fc.property(arbitrary, (value) => {
         targetSchema.parse(value);
-      })
+      }),
     );
   });
 });
@@ -318,10 +319,10 @@ describe("Override the arbitrary for a particular schema type", () => {
   test("using custom UUID arbitrary", () => {
     const arbitrary = ZodFastCheck().override(UUID, fc.uuid()).inputOf(UUID);
 
-    return fc.assert(
+    fc.assert(
       fc.property(arbitrary, (value) => {
         UUID.parse(value);
-      })
+      }),
     );
   });
 
@@ -330,10 +331,10 @@ describe("Override the arbitrary for a particular schema type", () => {
 
     const arbitrary = ZodFastCheck().override(UUID, fc.uuid()).inputOf(schema);
 
-    return fc.assert(
+    fc.assert(
       fc.property(arbitrary, (value) => {
         schema.parse(value);
-      })
+      }),
     );
   });
 
@@ -344,10 +345,10 @@ describe("Override the arbitrary for a particular schema type", () => {
       .override(IntAsString, fc.integer())
       .inputOf(IntAsString);
 
-    return fc.assert(
+    fc.assert(
       fc.property(arbitrary, (value) => {
         z.number().int().parse(value);
-      })
+      }),
     );
   });
 
@@ -356,11 +357,11 @@ describe("Override the arbitrary for a particular schema type", () => {
       .override(IntAsString, fc.integer())
       .outputOf(IntAsString);
 
-    return fc.assert(
+    fc.assert(
       fc.property(arbitrary, (value) => {
         expect(typeof value).toBe("string");
-        expect(Number(value) === parseInt(value, 10));
-      })
+        expect(Number(value) === Number.parseInt(value, 10)).toBe(true);
+      }),
     );
   });
 
@@ -368,15 +369,15 @@ describe("Override the arbitrary for a particular schema type", () => {
     const NumericString = z.string().regex(/^\d+$/);
 
     const zfc = ZodFastCheck().override(NumericString, (zfc) =>
-      zfc.inputOf(z.number().int().nonnegative()).map(String)
+      zfc.inputOf(z.number().int().nonnegative()).map(String),
     );
 
     const arbitrary = zfc.outputOf(NumericString);
 
-    return fc.assert(
+    fc.assert(
       fc.property(arbitrary, (value) => {
         expect(value).toMatch(/^\d+$/);
-      })
+      }),
     );
   });
 });
@@ -385,30 +386,30 @@ describe("Throwing an error if it is not able to generate a value", () => {
   test("generating input values for an impossible refinement", () => {
     const arbitrary = ZodFastCheck().inputOf(z.string().refine(() => false));
 
-    expect(() =>
+    expect(() => {
       fc.assert(
         fc.property(arbitrary, (value) => {
           return true;
-        })
-      )
-    ).toThrow(
+        }),
+      );
+    }).toThrow(
       new ZodFastCheckGenerationError(
         "Unable to generate valid values for Zod schema. " +
-          "An override is must be provided for the schema at path '.'."
-      )
+          "An override is must be provided for the schema at path '.'.",
+      ),
     );
   });
 
   test("generating output values for an impossible refinement", () => {
     const arbitrary = ZodFastCheck().outputOf(z.string().refine(() => false));
 
-    expect(() =>
+    expect(() => {
       fc.assert(
         fc.property(arbitrary, (value) => {
           return true;
-        })
-      )
-    ).toThrow(ZodFastCheckGenerationError);
+        }),
+      );
+    }).toThrow(ZodFastCheckGenerationError);
   });
 
   // Tests for the "paths" given in error messages to locate the problematic
@@ -418,106 +419,107 @@ describe("Throwing an error if it is not able to generate a value", () => {
 
   const cases: {
     description: string;
-    schema: ZodTypeAny;
     expectedErrorPath: string;
+    schema: ZodTypeAny;
   }[] = [
     {
       description: "nested objects",
-      schema: z.object({ foo: z.object({ bar: impossible }) }),
       expectedErrorPath: ".foo.bar",
+      schema: z.object({ foo: z.object({ bar: impossible }) }),
     },
     {
       description: "arrays",
-      schema: z.object({ items: z.array(impossible) }),
       expectedErrorPath: ".items[*]",
+      schema: z.object({ items: z.array(impossible) }),
     },
     {
       description: "unions",
-      schema: z.object({ status: z.union([z.number(), impossible]) }),
       expectedErrorPath: ".status",
+      schema: z.object({ status: z.union([z.number(), impossible]) }),
     },
     {
       description: "discriminated unions",
-      schema: z.discriminatedUnion("type", [
-        z.object({ type: z.literal("a"), a: impossible }),
-        z.object({ type: z.literal("b"), b: z.string() }),
-      ]),
       expectedErrorPath: ".a",
+      schema: z.discriminatedUnion("type", [
+        z.object({ a: impossible, type: z.literal("a") }),
+        z.object({ b: z.string(), type: z.literal("b") }),
+      ]),
     },
     {
       description: "tuples",
+      expectedErrorPath: ".scores[*]",
       schema: z.object({
         scores: z.record(impossible),
       }),
-      expectedErrorPath: ".scores[*]",
     },
     {
       description: "map keys",
+      expectedErrorPath: ".scores.(key)",
       schema: z.object({
         scores: z.map(impossible, z.number()),
       }),
-      expectedErrorPath: ".scores.(key)",
     },
     {
       description: "map values",
+      expectedErrorPath: ".scores.(value)",
       schema: z.object({
         scores: z.map(z.string(), impossible),
       }),
-      expectedErrorPath: ".scores.(value)",
     },
     {
       description: "function return types",
+      expectedErrorPath: ".myFunction.(return type)",
       schema: z.object({
         myFunction: z.function(z.tuple([]), impossible),
       }),
-      expectedErrorPath: ".myFunction.(return type)",
     },
     {
       description: "promise resolved types",
+      expectedErrorPath: ".myPromise.(resolved type)",
       schema: z.object({
         myPromise: z.promise(impossible),
       }),
-      expectedErrorPath: ".myPromise.(resolved type)",
     },
     {
       description: "optional types",
+      expectedErrorPath: ".myOptional",
       schema: z.object({
         myOptional: z.optional(impossible),
       }),
-      expectedErrorPath: ".myOptional",
     },
     {
       description: "nullable types",
+      expectedErrorPath: ".myNullable",
       schema: z.object({
         myNullable: z.nullable(impossible),
       }),
-      expectedErrorPath: ".myNullable",
     },
     {
       description: "types with defaults",
+      expectedErrorPath: ".withDefault",
       schema: z.object({
         withDefault: impossible.default(""),
       }),
-      expectedErrorPath: ".withDefault",
     },
     {
       description: "types with transforms",
+      expectedErrorPath: ".withTransform",
       schema: z.object({
         withTransform: impossible.transform((s) => !!s),
       }),
-      expectedErrorPath: ".withTransform",
     },
   ];
 
-  for (const { description, schema, expectedErrorPath } of cases) {
-    test("correct error path is shown for " + description, () => {
+  for (const { description, expectedErrorPath, schema } of cases) {
+    test(`correct error path is shown for ${description}`, () => {
       const arbitrary = ZodFastCheck().inputOf(schema);
 
-      expect(() => fc.assert(fc.property(arbitrary, () => true))).toThrow(
+      expect(() => {
+        fc.assert(fc.property(arbitrary, () => true));
+      }).toThrow(
         new ZodFastCheckGenerationError(
-          "Unable to generate valid values for Zod schema. " +
-            `An override is must be provided for the schema at path '${expectedErrorPath}'.`
-        )
+          `Unable to generate valid values for Zod schema. An override is must be provided for the schema at path '${expectedErrorPath}'.`,
+        ),
       );
     });
   }
@@ -525,26 +527,26 @@ describe("Throwing an error if it is not able to generate a value", () => {
   test("generating input values for an impossible pipeline", () => {
     const arbitrary = ZodFastCheck().inputOf(z.string().pipe(z.boolean()));
 
-    expect(() =>
+    expect(() => {
       fc.assert(
         fc.property(arbitrary, (value) => {
           return true;
-        })
-      )
-    ).toThrow(
+        }),
+      );
+    }).toThrow(
       new ZodFastCheckGenerationError(
         "Unable to generate valid values for Zod schema. " +
-          "An override is must be provided for the schema at path '.'."
-      )
+          "An override is must be provided for the schema at path '.'.",
+      ),
     );
   });
 });
 
 describe("Generate arbitraries for lazy schemas", () => {
   enum Biscuits {
-    Digestive,
-    CustardCream,
-    RichTea,
+    CustardCream = 1,
+    Digestive = 0,
+    RichTea = 2,
   }
 
   enum Cakes {
@@ -556,134 +558,134 @@ describe("Generate arbitraries for lazy schemas", () => {
   const penguinSymbol = Symbol.for("penguin");
 
   const schemas = {
-    string: z.string(),
-    number: z.number(),
-    bigint: z.bigint(),
-    boolean: z.boolean(),
-    date: z.date(),
-    undefined: z.undefined(),
-    null: z.null(),
+    any: z.any(),
+    "array branded with symbol": z
+      .array(z.number())
+      .brand<typeof penguinSymbol>(),
+    "array of arrays of booleans": z.array(z.array(z.boolean())),
     "array of numbers": z.array(z.number()),
     "array of string": z.array(z.string()),
-    "array of arrays of booleans": z.array(z.array(z.boolean())),
-    "nonempty array": z.array(z.number()).nonempty(),
-    "empty object": z.object({}),
-    "simple object": z.object({
-      aString: z.string(),
-      aBoolean: z.boolean(),
+    bigint: z.bigint(),
+    boolean: z.boolean(),
+    "Coerced bigint": z.coerce.bigint(),
+    "Coerced boolean": z.coerce.boolean(),
+    "Coerced date": z.coerce.date(),
+    "Coerced number": z.coerce.number(),
+    "Coerced string": z.coerce.string(),
+    "const enum": z.nativeEnum({
+      Duck: "duck",
+      Goose: 3,
+      Swan: "swan",
     }),
+    cuid: z.string().cuid(),
+    cuid2: z.string().cuid2(),
+    date: z.date(),
+    datetime: z.string().datetime(),
+    "datetime with high precision": z.string().datetime({ precision: 6 }),
+    "datetime with low precision": z.string().datetime({ precision: 0 }),
+    "datetime with offset": z.string().datetime({ offset: true }),
+    "deeply nested transformer": z.array(z.boolean().transform(Number)),
+    "discriminated union": z.discriminatedUnion("type", [
+      z.object({ a: z.string(), type: z.literal("a") }),
+      z.object({
+        b: z.object({
+          x: z.string(),
+        }),
+        type: z.literal("b"),
+      }),
+      z.object({
+        c: z.number(),
+        type: z.literal("c"),
+      }),
+    ]),
+    email: z.string().email(),
+    "empty object": z.object({}),
+    "empty tuple": z.tuple([]),
+    enum: z.enum(["Bear", "Wolf", "Fox"]),
+    finite: z.number().finite(),
+    "function returning boolean": z.function().returns(z.boolean()),
+    int: z.number().int(),
+    "literal boolean": z.literal(false),
+    "literal number": z.literal(123.5),
+    "literal string": z.literal("hello"),
+    "literal symbol": z.literal(Symbol("mySymbol")),
+    "map with object keys": z.map(
+      z.object({ id: z.number() }),
+      z.array(z.boolean()),
+    ),
+    "map with string keys": z.map(z.string(), z.number()),
+    "multiple multiple of": z.number().multipleOf(3).multipleOf(5),
+    "multiple of": z.number().multipleOf(3),
+    "multiple of with min and max": z.number().multipleOf(10).min(67).max(99),
+    nan: z.nan(),
+    "native enum with numeric values": z.nativeEnum(Biscuits),
+    "native enum with string values": z.nativeEnum(Cakes),
+    negative: z.number().negative(),
     "nested object": z.object({
       child: z.object({
         grandchild1: z.null(),
         grandchild2: z.boolean(),
       }),
     }),
-    union: z.union([z.boolean(), z.string()]),
-    "discriminated union": z.discriminatedUnion("type", [
-      z.object({ type: z.literal("a"), a: z.string() }),
-      z.object({
-        type: z.literal("b"),
-        b: z.object({
-          x: z.string(),
-        }),
-      }),
-      z.object({
-        type: z.literal("c"),
-        c: z.number(),
-      }),
-    ]),
-    nan: z.nan(),
-    "string branded with string": z.string().brand<"timezone">(),
-    "object branded with number": z.object({ a: z.boolean() }).brand<123>(),
-    "array branded with symbol": z
-      .array(z.number())
-      .brand<typeof penguinSymbol>(),
-    "empty tuple": z.tuple([]),
-    "nonempty tuple": z.tuple([z.string(), z.boolean(), z.date()]),
     "nested tuple": z.tuple([z.string(), z.tuple([z.number()])]),
-    "record of numbers": z.record(z.number()),
-    "record of objects": z.record(z.object({ name: z.string() })),
-    "record of strings": z.record(z.string()),
-    "record of strings with min-length values": z.record(z.string().min(1)),
-    "record of strings with min-length keys": z.record(
-      z.string().min(1),
-      z.string()
-    ),
-    "map with string keys": z.map(z.string(), z.number()),
-    "map with object keys": z.map(
-      z.object({ id: z.number() }),
-      z.array(z.boolean())
-    ),
-    set: z.set(z.number()),
+    "nonempty array": z.array(z.number()).nonempty(),
     "nonempty set": z.set(z.number()).nonempty(),
-    "set with min": z.set(z.number()).min(2),
-    "set with max": z.set(z.number()).max(3),
-    "function returning boolean": z.function().returns(z.boolean()),
-    "literal number": z.literal(123.5),
-    "literal string": z.literal("hello"),
-    "literal boolean": z.literal(false),
-    "literal symbol": z.literal(Symbol("mySymbol")),
-    enum: z.enum(["Bear", "Wolf", "Fox"]),
-    "native enum with numeric values": z.nativeEnum(Biscuits),
-    "native enum with string values": z.nativeEnum(Cakes),
-    "const enum": z.nativeEnum({
-      Duck: "duck",
-      Swan: "swan",
-      Goose: 3,
-    }),
-    promise: z.promise(z.string()),
-    any: z.any(),
-    unknown: z.unknown(),
-    void: z.void(),
-    "optional number": z.optional(z.number()),
-    "optional boolean": z.optional(z.boolean()),
-    "nullable string": z.nullable(z.string()),
+    "nonempty tuple": z.tuple([z.string(), z.boolean(), z.date()]),
+    nonnegative: z.number().nonnegative(),
+    nonpositive: z.number().nonpositive(),
+    null: z.null(),
     "nullable object": z.nullable(z.object({ age: z.number() })),
-    "with default": z.number().default(0),
+    "nullable string": z.nullable(z.string()),
 
+    number: z.number(),
+    "number to string transformer": z.number().transform(String),
+    "number with custom refinement": z.number().refine((x) => x % 3 === 0),
+    "number with float max and min": z.number().min(0.5).max(1.5),
+    "number with maximum": z.number().max(500),
     // Schemas which rely on refinements
     "number with minimum": z.number().min(500),
-    "number with maximum": z.number().max(500),
-    "number with float max and min": z.number().min(0.5).max(1.5),
-    int: z.number().int(),
+    "object branded with number": z.object({ a: z.boolean() }).brand<123>(),
+    "optional boolean": z.optional(z.boolean()),
+    "optional number": z.optional(z.number()),
     positive: z.number().positive(),
-    negative: z.number().negative(),
-    nonpositive: z.number().nonpositive(),
-    nonnegative: z.number().nonnegative(),
-    finite: z.number().finite(),
-    "multiple of": z.number().multipleOf(3),
-    "multiple multiple of": z.number().multipleOf(3).multipleOf(5),
-    "multiple of with min and max": z.number().multipleOf(10).min(67).max(99),
-    "number with custom refinement": z.number().refine((x) => x % 3 === 0),
+    promise: z.promise(z.string()),
+    "record of numbers": z.record(z.number()),
+    "record of objects": z.record(z.object({ name: z.string() })),
 
-    "string with minimum length": z.string().min(24),
-    "string with maximum length": z.string().max(24),
-    "string with fixed length": z.string().length(256),
-    "string with prefix": z.string().startsWith("prefix"),
-    "string with suffix": z.string().endsWith("suffix"),
-    cuid: z.string().cuid(),
-    cuid2: z.string().cuid2(),
-    uuid: z.string().uuid(),
-    url: z.string().url(),
-    email: z.string().email(),
+    "record of strings": z.record(z.string()),
+    "record of strings with min-length keys": z.record(
+      z.string().min(1),
+      z.string(),
+    ),
+    "record of strings with min-length values": z.record(z.string().min(1)),
     regex: z.string().regex(/\s/),
-    datetime: z.string().datetime(),
-    "datetime with offset": z.string().datetime({ offset: true }),
-    "datetime with low precision": z.string().datetime({ precision: 0 }),
-    "datetime with high precision": z.string().datetime({ precision: 6 }),
-    "number to string transformer": z.number().transform(String),
-    "deeply nested transformer": z.array(z.boolean().transform(Number)),
+    set: z.set(z.number()),
+    "set with max": z.set(z.number()).max(3),
+    "set with min": z.set(z.number()).min(2),
+    "simple object": z.object({
+      aBoolean: z.boolean(),
+      aString: z.string(),
+    }),
+    string: z.string(),
+    "string branded with string": z.string().brand<"timezone">(),
     "string to number pipeline": z
       .string()
       .transform((s) => s.length)
       .pipe(z.number().min(5)),
-    "Coerced string": z.coerce.string(),
-    "Coerced number": z.coerce.number(),
-    "Coerced boolean": z.coerce.boolean(),
-    "Coerced bigint": z.coerce.bigint(),
-    "Coerced date": z.coerce.date(),
     "string with catch": z.string().catch("fallback"),
+    "string with fixed length": z.string().length(256),
+    "string with maximum length": z.string().max(24),
+    "string with minimum length": z.string().min(24),
+    "string with prefix": z.string().startsWith("prefix"),
+    "string with suffix": z.string().endsWith("suffix"),
     symbol: z.symbol(),
+    undefined: z.undefined(),
+    union: z.union([z.boolean(), z.string()]),
+    unknown: z.unknown(),
+    url: z.string().url(),
+    uuid: z.string().uuid(),
+    void: z.void(),
+    "with default": z.number().default(0),
   };
 
   for (const [name, schema] of Object.entries(schemas)) {
@@ -693,7 +695,7 @@ describe("Generate arbitraries for lazy schemas", () => {
       return fc.assert(
         fc.asyncProperty(arbitrary, async (value) => {
           await schema.parse(value);
-        })
+        }),
       );
     });
   }
@@ -704,8 +706,8 @@ describe("Throwing an error if the schema type is not supported", () => {
     expect(() => ZodFastCheck().inputOf(z.never())).toThrow(
       new ZodFastCheckUnsupportedSchemaError(
         "Unable to generate valid values for Zod schema. " +
-          "Never schemas are not supported (at path '.')."
-      )
+          "Never schemas are not supported (at path '.').",
+      ),
     );
   });
 
@@ -714,24 +716,24 @@ describe("Throwing an error if the schema type is not supported", () => {
       ZodFastCheck().inputOf(
         z.intersection(
           z.object({ foo: z.string() }),
-          z.object({ bar: z.number() })
-        )
-      )
+          z.object({ bar: z.number() }),
+        ),
+      ),
     ).toThrow(
       new ZodFastCheckUnsupportedSchemaError(
         "Unable to generate valid values for Zod schema. " +
-          "Intersection schemas are not supported (at path '.')."
-      )
+          "Intersection schemas are not supported (at path '.').",
+      ),
     );
   });
 
   test("third-party schemas", () => {
     interface ZodSymbolDef extends ZodTypeDef {
-      symbol: Symbol;
+      symbol: symbol;
     }
 
-    class SymbolSchema extends ZodSchema<Symbol, ZodSymbolDef, Symbol> {
-      _parse({ data }: ParseInput): ParseReturnType<Symbol> {
+    class SymbolSchema extends ZodSchema<symbol, ZodSymbolDef, symbol> {
+      _parse({ data }: ParseInput): ParseReturnType<symbol> {
         if (data === this._def.symbol) {
           return OK(data);
         }
@@ -740,12 +742,12 @@ describe("Throwing an error if the schema type is not supported", () => {
     }
 
     expect(() =>
-      ZodFastCheck().inputOf(new SymbolSchema({ symbol: Symbol.iterator }))
+      ZodFastCheck().inputOf(new SymbolSchema({ symbol: Symbol.iterator })),
     ).toThrow(
       new ZodFastCheckUnsupportedSchemaError(
         "Unable to generate valid values for Zod schema. " +
-          "'SymbolSchema' schemas are not supported (at path '.')."
-      )
+          "'SymbolSchema' schemas are not supported (at path '.').",
+      ),
     );
   });
 });

@@ -4,3 +4,4 @@ node_modules
 *.tsbuildinfo
 npm-debug.log*
 .vscode/
+.DS_Store
