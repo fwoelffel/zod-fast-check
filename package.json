@@ -54,8 +54,8 @@
     "build": "tsc",
     "clean": "rm -rf node_modules package-lock.json dist",
     "postversion": "git push && git push --tags",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm test",
+    "prepare": "$npm_execpath run build",
+    "prepublishOnly": "$npm_execpath test",
     "test": "jest"
   },
   "sideEffects": false,
